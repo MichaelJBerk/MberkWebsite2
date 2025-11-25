@@ -22,19 +22,21 @@
             "type": "swift",
             "request": "launch",
             "name": "Debug Mberk",
-            "program": "${workspaceFolder:mberk}/.build/debug/Mberk",
             "args": [],
-            "cwd": "${workspaceFolder:mberk}",
-            "preLaunchTask": "swift: Build Debug Mberk"
+            "cwd": "${workspaceFolder:mberk2}",
+            "preLaunchTask": "swift: Build Debug Mberk",
+            "target": "Mberk",
+            "configuration": "debug"
         },
         {
             "type": "swift",
             "request": "launch",
             "name": "Release Mberk",
-            "program": "${workspaceFolder:mberk}/.build/release/Mberk",
             "args": [],
-            "cwd": "${workspaceFolder:mberk}",
-            "preLaunchTask": "swift: Build Release Mberk"
+            "cwd": "${workspaceFolder:mberk2}",
+            "preLaunchTask": "swift: Build Release Mberk",
+            "target": "Mberk",
+            "configuration": "release"
         }
     ]
 }

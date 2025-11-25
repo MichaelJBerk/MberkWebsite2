@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Michael Berk</title><description>Michael Berk's website</description><link>https://mberk.com</link><language>en</language><lastBuildDate>Mon, 24 Nov 2025 22:48:01 -0500</lastBuildDate><pubDate>Mon, 24 Nov 2025 22:48:01 -0500</pubDate><ttl>250</ttl><atom:link href="https://mberk.com/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://mberk.com/posts/QuickLook+TextViewTrouble</guid><title>QuickLook + TextView Trouble</title><description>The cursed combination of QuickLook and NSTextView leads to some undocumented issues....</description><link>https://mberk.com/posts/QuickLook+TextViewTrouble</link><pubDate>Sun, 5 Feb 2023 21:00:00 -0500</pubDate><content:encoded><![CDATA[<p>QuickLook is a really useful technology on Apple's OSes, and thankfully, SwiftUI has official support for showing a QuickLook preview of an item: the <a href="https://developer.apple.com/documentation/swiftui/view/quicklookpreview(_:in:"><code>quickLookPreview</code></a>) modifier, bridging the two disparate ways that macOS and iOS use to show previews (<a href="https://developer.apple.com/documentation/quicklookui/qlpreviewpanel"><code>QLPreviewPanel</code></a> and <a href="https://developer.apple.com/documentation/quicklook/qlpreviewcontroller"><code>QLPreviewController</code></a>). However, when implementing this into a side-project of mine, I encountered a strange issue: For whatever, reason, the preview wouldn't activate on macOS unless the button was clicked twice.</p><video controls preload="metadata">
+<source src="QuickLookIssue.mov#t=0.1" type="video/mp4">
+</video><p>After a bunch of ugly experimentation with <code>QLPreviewPanel</code>, I eventually discovered the unlikely culprit: <code>NSTextView</code>. To understand why this happens, we'll need to look at how the QuickLook panel works under-the-hood.</p><p>So, why does this happen? <code>QLPreviewPanel</code> is a subclass of <a href="https://developer.apple.com/documentation/appkit/nspanel"><code>NSPanel</code></a>, which is a very weird subclass of NSWindow that has a bunch of interesting behaviors (a topic for another day). An app has a single shared <code>QLPreviewPanel</code> instance, and you can use a class that conforms to <code>QLPreviewPanelDataSource</code> to provide it with your preview item(s). However, out-of-the-box, <code>QLPreviewPanel</code> traverses the app's Responder Chain to find an object that can control it. As it turns out, <code>NSTextView</code> has the private <code>quickLookPreviewableItemsInRanges:</code> method, which overrides whatever you're trying to set the QuickLook panel to, as long as an <code>NSTextView</code> is in focus.</p><img src="header.png" alt="Header"/><p>When the panel appears empty, that's because the <code>NSTextView</code> doesn't have anything to provide it with. However, once the panel has been shown, if we set the data again, the QuickLook panel will now display the preview correctly. Interestingly, this doesn't happen with the out-of-the-box SwiftUI <code>TextEditor</code> view. However, my side-project needs to use a custom <code>NSViewRepresentable</code> for <code>NSTextView</code>, which is where I first discovered this issue.</p><p>It's worth noting that this issue isn't exclusive to SwiftUI - as long as an <code>NSTextView</code> is focused when presenting a <code>QLPreviewPanel</code>, it will run into the same issue.</p><h2>Workaround</h2><p>The simplest way I found to combat <code>quickLookPreviewableItems:</code> is to remove focus from the offending <code>NSTextView</code> before showing the view.</p><p>For context, this is what my view looked like before the workaround:</p><pre data-language="swift" class="hljs"><code><span class="hljs-keyword">import</span> SwiftUI
+<span class="hljs-keyword">import</span> QuickLook
+
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">ContentView</span>: <span class="hljs-title">View</span> </span>{
+    <span class="hljs-keyword">var</span> docURL: <span class="hljs-type">URL</span>
+    
+    @<span class="hljs-type">State</span> <span class="hljs-keyword">var</span> qlURL: <span class="hljs-type">URL?</span>
+    @<span class="hljs-type">State</span> <span class="hljs-keyword">var</span> showTextView = <span class="hljs-literal">false</span>
+    @<span class="hljs-type">State</span> <span class="hljs-keyword">var</span> text = <span class="hljs-string">""</span>
+    <span class="hljs-keyword">var</span> body: some <span class="hljs-type">View</span> {
+        <span class="hljs-type">VStack</span> {
+            <span class="hljs-type">Button</span>(<span class="hljs-string">"Show QuickLook"</span>) {
+                qlURL = docURL
+            }
+            <span class="hljs-comment">//This is simple NSViewRepresentable for an NSTextView. </span>
+            <span class="hljs-comment">//Take a look at the sample project if you want to see it.</span>
+            <span class="hljs-type">TextView</span>(text: $text)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .quickLookPreview($qlURL)
+    }
+}
+</code></pre><p>To fix it, I've created a <code>@FocusState</code> property that controls which view is currently in focus (<code>textFocus</code>). By setting it to <code>false</code> before setting <code>qlURL</code>, we can ensure that the <code>TextView</code> is not focused when showing the panel, and will thus function as expected.</p><pre data-language="Swift" class="hljs"><code><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">ContentView</span>: <span class="hljs-title">View</span> </span>{
+    <span class="hljs-keyword">var</span> docURL: <span class="hljs-type">URL</span>
+    
+    @<span class="hljs-type">State</span> <span class="hljs-keyword">var</span> qlURL: <span class="hljs-type">URL?</span>
+    @<span class="hljs-type">State</span> <span class="hljs-keyword">var</span> showTextView = <span class="hljs-literal">false</span>
+    @<span class="hljs-type">State</span> <span class="hljs-keyword">var</span> text = <span class="hljs-string">""</span>
+    @<span class="hljs-type">FocusState</span> <span class="hljs-keyword">var</span> textFocus
+    <span class="hljs-keyword">var</span> body: some <span class="hljs-type">View</span> {
+        <span class="hljs-type">VStack</span> {
+            <span class="hljs-type">Button</span>(<span class="hljs-string">"Show QuickLook"</span>) {
+                textFocus = <span class="hljs-literal">false</span>
+                qlURL = docURL
+            }
+            <span class="hljs-type">TextView</span>(text: $text)
+                .focused($textFocus)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .quickLookPreview($qlURL)
+    }
+}
+</code></pre><video controls preload="metadata">
+<source src="QuickLookFixed.mp4#t=0.1" type="video/mp4">
+</video><p><a href="https://github.com/MichaelJBerk/QLTextViewTrouble"><strong>You can find a sample project with this fix here</strong></a></p><p>It would be remiss if I didn't mention the other way around this problem: overriding <code>quickLookPreviewableItemsInRanges:</code> and having it return whatever items you want to preview. However, I personally don't recommend you do this. For one, <code>quickLookPreviewableItemsInRanges:</code> is an undocumented API, so its underlying functionality could theoretically change with any software update, and if you ever plan on publishing to the Mac App Store, it's probably best to not tempt fate by submitting this code to App Review. But beyond that, you'd have to come up with a mechanism for telling the <code>NSTextView</code> subclass that overrides the method what item you want to preview in the first place, and after hunting around for a solution to this problem, that's the last thing I want to do.</p>]]></content:encoded></item></channel></rss>

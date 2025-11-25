@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug mberk",
+            "program": "${workspaceFolder:mberk}/.build/debug/mberk",
+            "args": [],
+            "cwd": "${workspaceFolder:mberk}",
+            "preLaunchTask": "swift: Build Debug mberk"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release mberk",
+            "program": "${workspaceFolder:mberk}/.build/release/mberk",
+            "args": [],
+            "cwd": "${workspaceFolder:mberk}",
+            "preLaunchTask": "swift: Build Release mberk"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "name": "Debug Mberk",
+            "program": "${workspaceFolder:mberk}/.build/debug/Mberk",
+            "args": [],
+            "cwd": "${workspaceFolder:mberk}",
+            "preLaunchTask": "swift: Build Debug Mberk"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "name": "Release Mberk",
+            "program": "${workspaceFolder:mberk}/.build/release/Mberk",
+            "args": [],
+            "cwd": "${workspaceFolder:mberk}",
+            "preLaunchTask": "swift: Build Release Mberk"
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+:root {
+	color-scheme: light dark;
+}
+* {
+	font-family: -apple-system, sans-serif;
+}
+body {
+	padding: 25px;
+}
+@media (prefers-color-scheme: dark) {
+	a {
+		color: #0089c7;
+	}
+}

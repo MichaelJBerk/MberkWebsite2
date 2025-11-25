@@ -47,5 +47,5 @@ try mberk.publish(using: [
     //     let feed = try file.readAsString()
 
     // },
-    .deploy(using: .gitHub("MichaelJBerk/MberkWebsite")),
+    .deploy(using: .gitHub("MichaelJBerk/MberkWebsite2")),
 ])
